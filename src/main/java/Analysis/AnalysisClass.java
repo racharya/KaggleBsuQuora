@@ -1,5 +1,7 @@
 package Analysis;
 
+import com.opencsv.CSVReader;
+
 import java.io.*;
 import java.util.ArrayList;
 
@@ -11,22 +13,39 @@ public class AnalysisClass {
     static double[] similarityTracker = null;
 
     public void readCsvFile(String filepath /*, ArrayList<QuestionRecord> Record */) {
-        BufferedReader br = null;
+        //BufferedReader br = null;
+        CSVReader reader = null;
         FileReader fr = null;
-        File file = new File(filepath);
-        System.out.println("Path: " + file.getAbsolutePath());
+        //File file = new File(filepath);
+        //System.out.println("Path: " + file.getAbsolutePath());
         String line = "";
 
         try {
-            fr = new FileReader(file);
-            br = new BufferedReader(fr);
+            fr = new FileReader(filepath);
+            //br = new BufferedReader(fr);
+            reader = new CSVReader(fr);
             //line = br.readLine();
-            while ((line = br.readLine()) != null) {
+            String[] record = null;
+
+            // TODO: *********************Refactor using opencsv stuff******************
+            while ((record = reader.readNext()) != null) {
                 // TODO: do not Skip the questions that have in between commas.
-                String[] record = line.replaceAll("\"", "").split("\\s*,\\s*");
-                if (record.length == 5) {
-                    questionRecords.add(new QuestionRecord(line));
-                }
+                //String[] record = line.replaceAll("\"", "").split("\\s*,\\s*");
+//                if (record.length == 5) {
+//                    questionRecords
+//                    questionRecords.add(new QuestionRecord(line));
+//                }
+                System.out.println("Read Record");
+                QuestionRecord qr = new QuestionRecord();
+                qr.setId(record[0]);
+                qr.setQId1(record[1]);
+                qr.setQId2(record[2]);
+                qr.setQ1(record[3]);
+                qr.setQ2(record[4]);
+                qr.setIsDuplicate(record[5]);
+
+                questionRecords.add(qr);
+
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -40,11 +59,7 @@ public class AnalysisClass {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            try {
-                br.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+
         }
 
     }
@@ -78,7 +93,7 @@ public class AnalysisClass {
     public static void main(String[] args) {
         AnalysisClass ac = new AnalysisClass();
 
-        ac.readCsvFile("test.csv"/*, questionRecords*/);
+        ac.readCsvFile("train.csv"/*, questionRecords*/);
         //System.out.println(out);
 
         //Extract question1 and 2 for the entire file
@@ -151,7 +166,7 @@ public class AnalysisClass {
         double averageSimilarity = sumSimilarity / similarityTracker.length;
         System.out.println("Average Similarity = " + averageSimilarity);
 
-        ac.UseModelToPredict();
+        //ac.UseModelToPredict();
 
 
     }
@@ -162,19 +177,20 @@ public class AnalysisClass {
         private String qid2 = null;
         private String q1 = null;
         private String q2 = null;
+        private String isDuplicate;
         //private boolean isDuplicate = false;
 
-        public QuestionRecord(String line) {
-            String[] record = line.replaceAll("\"", "").split("\\s*,\\s*");
-            id = record[0];
-            qid1 = record[1];
-            qid2 = record[2];
-            q1 = record[3];
-            q2 = record[4];
-            //isDuplicate = Integer.parseInt(record[5]) == 1;
-
-
-        }
+//        public QuestionRecord(String line) {
+//            String[] record = line.replaceAll("\"", "").split("\\s*,\\s*");
+//            id = record[0];
+//            qid1 = record[1];
+//            qid2 = record[2];
+//            q1 = record[3];
+//            q2 = record[4];
+//            //isDuplicate = Integer.parseInt(record[5]) == 1;
+//
+//
+//        }
 
         //public boolean isDuplicate() {
         //    return isDuplicate;
@@ -199,6 +215,30 @@ public class AnalysisClass {
         public String getId() {
             return id;
         }
+
+        public void setId(String id) {
+            this.id = id;
+        }
+
+        public void setQId1(String QId1) {
+            this.qid1 = QId1;
+        }
+
+        public void setQId2(String QId2) {
+            this.qid2 = QId2;
+        }
+
+        public void setQ1(String q1) {
+            this.q1 = q1;
+        }
+
+        public void setQ2(String q2) {
+            this.q2 = q2;
+        }
+
+        public void setIsDuplicate(String isDuplicate) {
+            this.isDuplicate = isDuplicate;
+        }
     }
 
     public void UseModelToPredict() {
@@ -209,7 +249,7 @@ public class AnalysisClass {
         File fileLinear = null;
         FileWriter writerLinear = null;
         try {
-            fileLinear = new File("./output.csv");
+            fileLinear = new File("./output2.csv");
             writerLinear = new FileWriter(fileLinear);
             writerLinear.write("id,is_duplicate\n");
         } catch (IOException e) {
