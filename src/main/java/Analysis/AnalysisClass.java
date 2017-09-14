@@ -35,14 +35,14 @@ public class AnalysisClass {
 //                    questionRecords
 //                    questionRecords.add(new QuestionRecord(line));
 //                }
-                System.out.println("Read Record");
+                //System.out.println("Read Record");
                 QuestionRecord qr = new QuestionRecord();
                 qr.setId(record[0]);
                 qr.setQId1(record[1]);
                 qr.setQId2(record[2]);
                 qr.setQ1(record[3]);
                 qr.setQ2(record[4]);
-                qr.setIsDuplicate(record[5]);
+                //qr.setIsDuplicate(record[5]);
 
                 questionRecords.add(qr);
 
@@ -93,7 +93,7 @@ public class AnalysisClass {
     public static void main(String[] args) {
         AnalysisClass ac = new AnalysisClass();
 
-        ac.readCsvFile("train.csv"/*, questionRecords*/);
+        ac.readCsvFile("test.csv"/*, questionRecords*/);
         //System.out.println(out);
 
         //Extract question1 and 2 for the entire file
@@ -166,7 +166,7 @@ public class AnalysisClass {
         double averageSimilarity = sumSimilarity / similarityTracker.length;
         System.out.println("Average Similarity = " + averageSimilarity);
 
-        //ac.UseModelToPredict();
+        ac.UseModelToPredict();
 
 
     }
@@ -177,7 +177,7 @@ public class AnalysisClass {
         private String qid2 = null;
         private String q1 = null;
         private String q2 = null;
-        private String isDuplicate;
+        //private String isDuplicate;
         //private boolean isDuplicate = false;
 
 //        public QuestionRecord(String line) {
@@ -236,13 +236,13 @@ public class AnalysisClass {
             this.q2 = q2;
         }
 
-        public void setIsDuplicate(String isDuplicate) {
-            this.isDuplicate = isDuplicate;
-        }
+//        public void setIsDuplicate(String isDuplicate) {
+//            this.isDuplicate = isDuplicate;
+//        }
     }
 
     public void UseModelToPredict() {
-        double goldenSimilarity = 0.8872903633401067;
+        double goldenSimilarity = 0.8715326395155435;
         //AnalysisClass ac = new AnalysisClass();
         //ac.readCsvFile("test.csv"/*, questionRecordsTest*/);
         int i = 0;
