@@ -4,31 +4,37 @@ import com.opencsv.CSVReader;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 
 public class AnalysisClass {
 
     private static ArrayList<QuestionRecord> questionRecords = new ArrayList<>();
-    private static ArrayList<String[]> docs = new ArrayList<>();
     static double[] similarityTracker = null;
 
-    public void readCsvFile(String filepath /*, ArrayList<QuestionRecord> Record */) {
-        CSVReader reader;
+    public void readCsvFile(String filepath){
+        System.out.println("In ReadCSVFile");
+        CSVReader reader = null;
         FileReader fr = null;
 
         try {
             fr = new FileReader(filepath);
             reader = new CSVReader(fr);
-            String[] record;
-
+            String[] record = null;
+            System.out.println("Populating question records...");
             while ((record = reader.readNext()) != null) {
+                //System.out.println("record :" + record[3]);
                 QuestionRecord qr = new QuestionRecord();
                 qr.setId(record[0]);
                 qr.setQId1(record[1]);
                 qr.setQId2(record[2]);
                 qr.setQ1(record[3]);
                 qr.setQ2(record[4]);
+                //qr.setIsDup(record[5]);
                 questionRecords.add(qr);
             }
+            System.out.println("QuestionRecords COMPLETE!!");
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -38,9 +44,11 @@ public class AnalysisClass {
         } finally {
             try {
                 fr.close();
+                reader.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
+
         }
     }
 
@@ -52,86 +60,104 @@ public class AnalysisClass {
                 result++;
             }
         }
-        return result;
+        return result/doc.length;
     }
 
     public double calculateIdf(ArrayList<String[]> docs, String term) {
         double result = 0;
         for (String[] doc : docs) {
             for (String word : doc) {
-                if (term.equalsIgnoreCase(word))
+                if (term.equalsIgnoreCase(word)){
                     result++;
-                break;
+                    break;
+                }
             }
         }
 
         return Math.log((docs.size() / result));
     }
 
+    // Reference : https://blog.nishtahir.com/2015/09/19/fuzzy-string-matching-using-cosine-similarity/
+    public static Map<String, Integer> getTermFrequencyMap (String[] terms){
+        Map<String, Integer> termFrequencyMap = new HashMap<>();
+        for(String term : terms){
+            Integer n = termFrequencyMap.get(term);
+            n = (n == null) ? 1 : ++n;
+            termFrequencyMap.put(term,n);
+        }
+        return termFrequencyMap;
+    }
+
+    // Reference : https://blog.nishtahir.com/2015/09/19/fuzzy-string-matching-using-cosine-similarity/
+    public static double cosineSimilarity(String text1, String text2){
+
+        // Get vectors of the questions
+        Map<String, Integer> a = getTermFrequencyMap(text1.split("\\W+"));
+        Map<String, Integer> b = getTermFrequencyMap(text2.split("\\W+"));
+
+        // get unique words from both questions
+        HashSet<String> intersection = new HashSet<>(a.keySet());
+        intersection.retainAll(b.keySet());
+
+        double dotProduct = 0, magnitudeA = 0, magnitudeB = 0;
+
+        // Calculate dot product
+        for(String item: intersection){
+            dotProduct += a.get(item) * b.get(item);
+        }
+
+        // Calculate magnitude of question1
+        for(String k : a.keySet()){
+            magnitudeA += Math.pow(a.get(k), 2);
+        }
+
+        // calculate magnitude of question2
+        for(String k : b.keySet()){
+            magnitudeB += Math.pow(b.get(k), 2);
+        }
+
+        return dotProduct/(Math.sqrt(magnitudeA * magnitudeB));
+    }
 
     public static void main(String[] args) {
+        long startTime = System.currentTimeMillis();
         AnalysisClass ac = new AnalysisClass();
-
-        ac.readCsvFile("test.csv"/*, questionRecords*/);
+        System.out.println("In Main");
+        ac.readCsvFile("test.csv");
         int k = 0;
+        System.out.println("Question Record size: "+ questionRecords.size());
 
         similarityTracker = new double[questionRecords.size()];
+
+        System.out.println("Extracting questions");
         while (k < questionRecords.size()) {
             String question1 = questionRecords.get(k).getQ1();
             String question2 = questionRecords.get(k).getQ2();
 
-            System.out.println(question1);
-            System.out.println(question2);
-
-            String[] token1 = question1.split(" ");
-
-            String[] token2 = question2.split(" ");
-
-            docs.add(token1);
-            docs.add(token2);
-
-            int maxTotalWords = Math.max(token1.length, token2.length);
-
-            double[] tfCollection1 = new double[maxTotalWords];
-
-            for (int i = 0; i < token1.length; i++) {
-                tfCollection1[i] = ac.calculateTf(token1, token1[i]);
-            }
-            double[] tfCollection2 = new double[maxTotalWords];
-
-            for (int i = 0; i < token2.length; i++) {
-                tfCollection2[i] = ac.calculateTf(token2, token2[i]);
-
+            similarityTracker[k] = cosineSimilarity(question1, question2);
+            if(Double.isNaN(similarityTracker[k])){
+                similarityTracker[k] = 0.0;
             }
 
-            // a*b
-            double ab = tfCollection1[0] * tfCollection2[0];
-            double sumA = Math.pow(tfCollection1[0], 2);
-            double sumB = Math.pow(tfCollection2[0], 2);
-
-            for (int i = 1; i < maxTotalWords - 1; i++) {
-                ab += tfCollection1[i] * tfCollection2[i];
-                sumA += Math.pow(tfCollection1[i], 2);
-                sumB += Math.pow(tfCollection2[i], 2);
-            }
-
-            double magA = Math.sqrt(sumA);
-            double magB = Math.sqrt(sumB);
-            double similarity = (ab / (magA * magB));
-
-            System.out.println("Similarity = " + similarity);
-
-            similarityTracker[k] = similarity;
             k++;
         }
 
         // compute the average of the similarity to use on our test
         double sumSimilarity = 0.0;
         for (int i = 0; i < similarityTracker.length; i++) {
+            // TODO: Improve on avoiding getting NaN
+            if(Double.isNaN(similarityTracker[i])){
+                System.out.println("Index i = " + i);
+            }
             sumSimilarity += similarityTracker[i];
         }
+
         double averageSimilarity = sumSimilarity / similarityTracker.length;
+
         System.out.println("Average Similarity = " + averageSimilarity);
+
+        long elapsedTime = System.currentTimeMillis() - startTime;
+        System.out.println("Time Elapsed = " + elapsedTime);
 
         ac.UseModelToPredict();
     }
@@ -142,7 +168,11 @@ public class AnalysisClass {
         private String qid2 = null;
         private String q1 = null;
         private String q2 = null;
+        private String isDup = null;
 
+        public String getisDup(){
+            return isDup;
+        }
 
         public String getQ2() {
             return q2;
@@ -184,55 +214,59 @@ public class AnalysisClass {
             this.q2 = q2;
         }
 
-//        public void setIsDuplicate(String isDuplicate) {
-//            this.isDuplicate = isDuplicate;
-//        }
+        public void setIsDup(String isDup) {
+            this.isDup = isDup;
+        }
     }
 
-    public void UseModelToPredict() {
-        double goldenSimilarity = 0.8715326395155435;
-        int i = 0;
-        File fileLinear = null;
-        FileWriter writerLinear = null;
-        try {
-            fileLinear = new File("./output2.csv");
-            writerLinear = new FileWriter(fileLinear);
-            writerLinear.write("id,is_duplicate\n");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        System.out.println(similarityTracker.length);
-        while (i < similarityTracker.length) {
+        public void UseModelToPredict() {
+            // double goldenSimilarity = 0.8715326395155435; // submission1 score: 0.54910
+            double goldenSimilarity = 0.47962165669905826;   // submission2 score: 0.65225
 
-            if (similarityTracker[i] < goldenSimilarity) {
+            // the output similarity of Test = 0.48012771473507015
 
-                // write the number to csv file with that question id
-                try {
-                    writerLinear.write(questionRecords.get(i).getId() + "," + "0" + "\n");
-
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            } else {
-                //write the number to csv file with the both question id
-                try {
-                    writerLinear.write(questionRecords.get(i).getId() + "," + "1" + "\n");
-
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+            int i = 0;
+            File fileLinear = null;
+            FileWriter writerLinear = null;
+            try {
+                fileLinear = new File("./output3.csv");
+                writerLinear = new FileWriter(fileLinear);
+                writerLinear.write("id,is_duplicate\n");
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            i++;
+            System.out.println(similarityTracker.length);
+            while (i < similarityTracker.length) {
+
+                if (similarityTracker[i] < goldenSimilarity) {
+
+                    // write the number to csv file with that id
+                    try {
+                        writerLinear.write(questionRecords.get(i).getId() + "," + "0" + "\n");
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    try {
+                        writerLinear.write(questionRecords.get(i).getId() + "," + "1" + "\n");
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                i++;
+            }
+            try {
+                writerLinear.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            try {
+                writerLinear.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-        try {
-            writerLinear.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        try {
-            writerLinear.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+
 }
