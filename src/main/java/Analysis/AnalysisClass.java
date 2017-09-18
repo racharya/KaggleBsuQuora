@@ -221,10 +221,9 @@ public class AnalysisClass {
 
         public void UseModelToPredict() {
             // double goldenSimilarity = 0.8715326395155435; // submission1 score: 0.54910
-            double goldenSimilarity = 0.47962165669905826;   // submission2 score: 0.65225
+            //double goldenSimilarity = 0.47962165669905826; // submission2 score: 0.65225
 
-            // the output similarity of Test = 0.48012771473507015
-
+            double goldenSimilarity = 0.48012771473507015; // submission3 score: 0.65230
             int i = 0;
             File fileLinear = null;
             FileWriter writerLinear = null;
