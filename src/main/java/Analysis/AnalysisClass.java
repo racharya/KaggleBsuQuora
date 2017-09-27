@@ -75,6 +75,25 @@ public class AnalysisClass {
         return Math.log((docs.size() / result));
     }
 
+    private boolean isStopWord(String wordToCheck){
+      return false;
+    }
+
+    public static Map<String, Double> getInverseDocFreq(String[] doc1, String[] doc2){
+        Map<String, Double> termFrequencyMap1 = new HashMap<>();
+        Double n = 0.0;
+        for(String terms1 : doc1){
+            for(String terms2: doc2){
+                if(terms1.equalsIgnoreCase(terms2)){
+                    n = termFrequencyMap1.get(terms2);
+                    n = (n == null) ? 1.0 : ++n;
+
+                }
+            }
+            termFrequencyMap1.put(terms1, n/2);
+        }
+        return termFrequencyMap1;
+    }
     // Reference : https://blog.nishtahir.com/2015/09/19/fuzzy-string-matching-using-cosine-similarity/
     public static Map<String, Double> getTermFrequencyMap(String[] terms) {
         Map<String, Double> termFrequencyMap = new HashMap<>();
@@ -98,6 +117,12 @@ public class AnalysisClass {
 //        questionsPerRow[0] = text1;
 //        questionsPerRow[1] = text2;
 
+        // printing hashmap
+        for(String name : a.keySet()){
+            String key = name.toString();
+            String value = a.get(name).toString();
+            System.out.println(key + " : "+value);
+        }
 
         // get unique words from both questions
         HashSet<String> intersection = new HashSet<>(a.keySet());
@@ -130,21 +155,23 @@ public class AnalysisClass {
         return dotProduct / (Math.sqrt(magnitudeA * magnitudeB));
     }
 
-    private static Map<String, Double> getInverseDocumentFrequencyMap(String[] questionsPerRow, Map<String, Double> a) {
-        Map<String, Double> idfMap = new HashMap<>();
-        double result = 0.0;
-        for (String question : questionsPerRow) {
-            if (a.containsKey(question)) {
-                result++;
-                idfMap.put(question, result);
-            }
-        }
-        return idfMap;
-    }
-
 
     public static void main(String[] args) {
         // test idf for q1
+
+        String q1 = "What is the step by step guide to invest in share market in india?";
+        String q2 = "What is the step by step guide to invest in share market?";
+
+        String[] terms1 = q1.split("\\W+");
+        String[] terms2 = q2.split("\\W+");
+
+        Map<String, Double> test = getInverseDocFreq(terms1, terms2);
+
+        for(String name : test.keySet()){
+            String key = name.toString();
+            String value = test.get(name).toString();
+            System.out.println(key + " : "+value);
+        }
 
 
         long startTime = System.currentTimeMillis();
@@ -159,6 +186,7 @@ public class AnalysisClass {
             String question1 = questionRecords.get(k).getQ1();
             String question2 = questionRecords.get(k).getQ2();
 
+            //TODO use tfidf
             similarityTracker[k] = cosineSimilarity(question1, question2);
 
 
